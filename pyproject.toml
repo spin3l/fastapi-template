@@ -1,0 +1,92 @@
+[project]
+name = "feature-flags"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "alembic>=1.20.0",
+    "asgi-correlation-id>=5.0.1",
+    "asyncpg>=0.31.0",
+    "configcat-client>=10.0.1",
+    "dependency-injector>=4.49.1",
+    "fastapi[standard]>=0.141.1",
+    "httpx>=0.28.1",
+    "pwdlib[argon2]>=0.3.1",
+    "pydantic-settings>=2.15.0",
+    "pyjwt[crypto]>=2.15.1",
+    "sqlalchemy[asyncio]>=2.0.54",
+    "structlog>=26.1.0",
+]
+
+[dependency-groups]
+dev = [
+    "import-linter>=2.15",
+    "mypy>=2.3.1",
+    "pre-commit>=4.6.2",
+    "pytest>=9.1.1",
+    "ruff>=0.16.10",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+extend-exclude = ["app/alembic/versions"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["app"]
+
+[tool.mypy]
+strict = true
+# Packages are PEP 420 namespace packages (no __init__.py), resolved from the repo root.
+mypy_path = "."
+explicit_package_bases = true
+plugins = ["pydantic.mypy"]
+exclude = ["app/alembic/versions"]
+
+[[tool.mypy.overrides]]
+module = ["configcatclient.*", "dependency_injector.*"]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+
+[tool.importlinter]
+root_package = "app"
+include_external_packages = true
+
+[[tool.importlinter.contracts]]
+name = "Hexagonal layers: infrastructure -> application -> domain"
+type = "layers"
+containers = ["app.auth", "app.features", "app.grades"]
+layers = ["infrastructure", "application", "domain"]
+
+[[tool.importlinter.contracts]]
+name = "Core does not depend on frameworks or vendors"
+type = "forbidden"
+source_modules = [
+    "app.auth.domain",
+    "app.auth.application",
+    "app.features.domain",
+    "app.features.application",
+    "app.grades.domain",
+    "app.grades.application",
+]
+forbidden_modules = [
+    "fastapi",
+    "sqlalchemy",
+    "configcatclient",
+    "dependency_injector",
+    "jwt",
+    "httpx",
+    "pwdlib",
+    "app.di",
+]
+
+[[tool.mypy.overrides]]
+module = ["app.features.infrastructure.configcat"]
+disallow_untyped_calls = false  # configcatclient ships no annotations

@@ -1,0 +1,33 @@
+# Only pyproject.toml, uv.lock, alembic.ini and app/ are needed in the image.
+
+# VCS / editors / agents
+.git
+.gitignore
+.vscode
+.idea
+.claude
+CLAUDE.md
+
+# Python artifacts
+.venv
+__pycache__
+*.py[oc]
+.mypy_cache
+.ruff_cache
+.pytest_cache
+build
+dist
+*.egg-info
+
+# Secrets: pass config through environment variables instead
+.env
+.env.*
+
+# Not needed at runtime
+tests
+Dockerfile
+docker-compose.yml
+.dockerignore
+Makefile
+.pre-commit-config.yaml
+README.md

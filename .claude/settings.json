@@ -1,0 +1,32 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(make test)",
+      "Bash(make lint)",
+      "Bash(make typecheck)",
+      "Bash(make check)",
+      "Bash(make format)",
+      "Bash(uv run pytest *)",
+      "Bash(uv run ruff *)",
+      "Bash(uv run mypy *)",
+      "Bash(uv run lint-imports)",
+      "Bash(make pre-commit)",
+      "Bash(uv run pre-commit run *)"
+    ]
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/check-architecture.sh",
+            "timeout": 60,
+            "statusMessage": "Checking architecture contracts..."
+          }
+        ]
+      }
+    ]
+  }
+}
