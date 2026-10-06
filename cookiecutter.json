@@ -1,0 +1,23 @@
+{
+  "project_name": "My Service",
+  "project_slug": "{{ cookiecutter.project_name.lower().strip().replace(' ', '-').replace('_', '-') }}",
+  "project_description": "FastAPI service built on a hexagonal architecture.",
+  "module_name": "items",
+  "entity_name": "{{ cookiecutter.module_name[:-1] if cookiecutter.module_name.endswith('s') else cookiecutter.module_name }}",
+
+  "__project_snake": "{{ cookiecutter.project_slug.replace('-', '_') }}",
+  "__module_title": "{{ cookiecutter.module_name.replace('_', ' ').title() }}",
+  "__module_class": "{{ cookiecutter.module_name.replace('_', ' ').title().replace(' ', '') }}",
+  "__entity_class": "{{ cookiecutter.entity_name.replace('_', ' ').title().replace(' ', '') }}",
+  "__entity_label": "{{ cookiecutter.entity_name.replace('_', ' ') }}",
+
+  "__prompts__": {
+    "project_name": "Project name (human readable)",
+    "project_slug": "Project slug (repo / package / docker name)",
+    "project_description": "One-line description",
+    "module_name": "Example domain module, plural snake_case (e.g. orders)",
+    "entity_name": "Its entity, singular snake_case (e.g. order)"
+  },
+
+  "_copy_without_render": ["*.mako"]
+}

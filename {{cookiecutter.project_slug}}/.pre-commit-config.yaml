@@ -1,0 +1,66 @@
+# Install once with `make hooks`. Run on everything with `make pre-commit`.
+# Project tools run through `uv run` so they use the versions pinned in uv.lock.
+default_install_hook_types: [pre-commit]
+fail_fast: false
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-toml
+      - id: check-merge-conflict
+      - id: check-added-large-files
+        args: [--maxkb=500]
+      - id: detect-private-key
+      - id: forbid-new-submodules
+
+  - repo: local
+    hooks:
+      - id: no-env-file
+        name: forbid committing .env
+        entry: .env must not be committed (use .env.example)
+        language: fail
+        files: (^|/)\.env$
+
+      - id: uv-lock
+        name: uv.lock is up to date
+        entry: uv lock --check
+        language: system
+        files: ^(pyproject\.toml|uv\.lock)$
+        pass_filenames: false
+
+      - id: ruff-format
+        name: ruff format
+        entry: uv run ruff format
+        language: system
+        types: [python]
+
+      - id: ruff-check
+        name: ruff check
+        entry: uv run ruff check --fix --exit-non-zero-on-fix
+        language: system
+        types: [python]
+
+      - id: import-linter
+        name: hexagonal layer contracts (import-linter)
+        entry: uv run lint-imports
+        language: system
+        files: ^(app/.*\.py|pyproject\.toml)$
+        pass_filenames: false
+
+      - id: mypy
+        name: mypy (strict)
+        entry: uv run mypy app tests
+        language: system
+        files: ^(app|tests)/.*\.py$|^pyproject\.toml$
+        pass_filenames: false
+
+      - id: pytest
+        name: pytest
+        entry: uv run pytest -q
+        language: system
+        files: ^(app|tests)/.*\.py$|^(pyproject\.toml|uv\.lock)$
+        pass_filenames: false

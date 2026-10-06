@@ -1,0 +1,45 @@
+name: {{ cookiecutter.project_slug }}
+
+x-app: &app
+  build: .
+  image: {{ cookiecutter.project_slug }}:local
+  env_file: .env
+  environment:
+    DATABASE_URL: postgresql+asyncpg://postgres:postgres@db:5432/{{ cookiecutter.__project_snake }}
+
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: {{ cookiecutter.__project_snake }}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d {{ cookiecutter.__project_snake }}"]
+      interval: 2s
+      timeout: 5s
+      retries: 15
+
+  migrate:
+    <<: *app
+    command: ["alembic", "upgrade", "head"]
+    depends_on:
+      db:
+        condition: service_healthy
+
+  api:
+    <<: *app
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+
+volumes:
+  pgdata:
