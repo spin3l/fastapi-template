@@ -2,10 +2,11 @@ import secrets
 import typing
 
 from dependency_injector.wiring import inject
-from fastapi import APIRouter, Cookie, Depends, HTTPException, Request, Response, status
+from fastapi import APIRouter, Cookie, Depends, Request, Response, status
 from fastapi.responses import RedirectResponse
 from fastapi.security import OAuth2PasswordRequestForm
 
+from app.auth.domain.exceptions import InvalidOAuthStateError
 from app.auth.infrastructure.http.dependencies import AuthServiceDep, CurrentUserDep
 from app.auth.infrastructure.http.schemas import TokenResponse, UserCreateRequest, UserResponse
 
@@ -77,7 +78,7 @@ async def google_callback(
     expected_state: typing.Annotated[str | None, Cookie(alias=GOOGLE_STATE_COOKIE)] = None,
 ) -> TokenResponse:
     if expected_state is None or not secrets.compare_digest(state, expected_state):
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Invalid OAuth state")
+        raise InvalidOAuthStateError
 
     response.delete_cookie(GOOGLE_STATE_COOKIE)
 

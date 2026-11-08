@@ -1,7 +1,7 @@
 import dataclasses
 
 from dependency_injector.wiring import inject
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends
 
 from app.features.domain.constants import Features
 from app.features.infrastructure.http.dependencies import require_feature
@@ -31,8 +31,4 @@ async def get_{{ cookiecutter.entity_name }}(
     {{ cookiecutter.entity_name }}_service: {{ cookiecutter.__entity_class }}ServiceDep,
 ) -> {{ cookiecutter.__entity_class }}Response:
     {{ cookiecutter.entity_name }} = await {{ cookiecutter.entity_name }}_service.get_{{ cookiecutter.entity_name }}(name)
-    if {{ cookiecutter.entity_name }} is None:
-        detail = f"No {{ cookiecutter.__entity_label }} for '{name}'"
-        raise HTTPException(status.HTTP_404_NOT_FOUND, detail)
-
     return {{ cookiecutter.__entity_class }}Response.model_validate(dataclasses.asdict({{ cookiecutter.entity_name }}))

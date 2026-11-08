@@ -2,28 +2,15 @@ import contextlib
 import typing
 
 from asgi_correlation_id import CorrelationIdMiddleware
-from fastapi import FastAPI, requests, responses, status
+from fastapi import FastAPI
 from starlette.middleware.base import BaseHTTPMiddleware
 
 import app.auth.infrastructure.http.dependencies as auth_dependencies
 import app.auth.infrastructure.http.routes as auth_routes
 import app.features.infrastructure.http.dependencies as features_dependencies
 import app.{{ cookiecutter.module_name }}.infrastructure.http.routes as {{ cookiecutter.module_name }}_routes
-from app import di
-from app.auth.infrastructure.http import errors as auth_errors
-from app.features.domain.exceptions import UnavailableFeatureError
+from app import di, handlers
 from app.shared import config, logs
-
-
-async def unavailable_feature_handler(
-    _: requests.Request,
-    _exc: Exception,
-) -> responses.JSONResponse:
-    # 404 rather than 403/503: a disabled feature looks like it doesn't exist.
-    return responses.JSONResponse(
-        content={"detail": "Not Found"},
-        status_code=status.HTTP_404_NOT_FOUND,
-    )
 
 
 def create_app(
@@ -65,7 +52,6 @@ def create_app(
     app.include_router(auth_routes.router)
     app.include_router({{ cookiecutter.module_name }}_routes.router)
 
-    app.add_exception_handler(UnavailableFeatureError, unavailable_feature_handler)
-    auth_errors.register_exception_handlers(app)
+    handlers.register_exception_handlers(app)
 
     return app

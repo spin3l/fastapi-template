@@ -25,5 +25,9 @@ class UnverifiedEmailError(AuthError):
     message = "Identity provider email is not verified"
 
 
+class InvalidOAuthStateError(AuthError):
+    message = "Invalid OAuth state"
+
+
 class IdentityProviderError(AuthError):
     message = "Could not authenticate with the identity provider"

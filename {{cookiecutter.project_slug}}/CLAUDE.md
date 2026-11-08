@@ -10,8 +10,9 @@ checks plus file hygiene on every commit. Fix failures instead of bypassing them
 ```
 app/
   main.py            # create_app() factory: middleware, routers, exception handlers, wiring
+  handlers.py        # registers shared + every module's exception handlers
   di.py              # composition root: the ONLY place that picks an adapter for a port
-  shared/            # cross-cutting infra: config (Settings), logs, db (Base/engine), http/schemas
+  shared/            # cross-cutting infra: config (Settings), logs, db (Base/engine), http/{schemas,errors}
   alembic/           # migrations (hand-written or `make migration m="..."`)
   <module>/          # auth, features, {{ cookiecutter.module_name }}, ...
     domain/          # entities (plain dataclasses), value objects, domain exceptions
@@ -40,8 +41,11 @@ tests/
 - **HTTP schemas live in `infrastructure/http/schemas.py`** and extend `shared.http.schemas.BaseSchema`
   (camelCase aliases). Exception: OAuth2 token responses stay snake_case.
 - **Routes never call driven ports directly**; they go through an application service.
-- **Errors:** domain raises domain exceptions; each module's `http/errors.py` maps them to status
-  codes and is registered in `main.py`.
+- **Errors:** domain and application code raise domain exceptions (`domain/exceptions.py`); routes
+  never raise `HTTPException`; each module's `http/errors.py` maps them to status
+  codes in a `register_exception_handlers(app)` function, which is called from `app/handlers.py`.
+  Build responses with `shared.http.errors.error_response` so every error body is
+  `{"detail": ..., "code": ...}`. Unhandled exceptions are logged and returned as a generic 500.
 - **Wiring a new adapter:** add a provider in `di.py` typed as the port
   (`providers.Singleton[Port]`). Use `providers.Resource` for anything that must be closed on
   shutdown (clients, engines). Add any module using `Provide[...]` to `container.wire(...)` in `main.py`.

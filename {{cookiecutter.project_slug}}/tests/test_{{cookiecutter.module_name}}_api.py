@@ -8,7 +8,7 @@ def test_{{ cookiecutter.module_name }}_hidden_when_feature_disabled(client: Tes
     response = client.get("/{{ cookiecutter.module_name }}/")
 
     assert response.status_code == 404
-    assert response.json() == {"detail": "Not Found"}
+    assert response.json() == {"detail": "Not Found", "code": "not_found"}
 
 
 def test_list_{{ cookiecutter.module_name }}_when_feature_enabled(
@@ -32,4 +32,7 @@ def test_get_unknown_{{ cookiecutter.entity_name }}_returns_404(
     response = client.get("/{{ cookiecutter.module_name }}/missing")
 
     assert response.status_code == 404
-    assert response.json() == {"detail": "No {{ cookiecutter.__entity_label }} for 'missing'"}
+    assert response.json() == {
+        "detail": "No {{ cookiecutter.__entity_label }} for 'missing'",
+        "code": "not_found",
+    }

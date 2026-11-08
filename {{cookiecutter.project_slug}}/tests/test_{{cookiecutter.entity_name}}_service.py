@@ -1,6 +1,7 @@
 import pytest
 
 from app.{{ cookiecutter.module_name }}.application.service import {{ cookiecutter.__entity_class }}Service
+from app.{{ cookiecutter.module_name }}.domain import exceptions
 from app.{{ cookiecutter.module_name }}.domain.{{ cookiecutter.entity_name }} import {{ cookiecutter.__entity_class }}, {{ cookiecutter.__entity_class }}Page
 from app.{{ cookiecutter.module_name }}.infrastructure.persistence.in_memory import InMemory{{ cookiecutter.__entity_class }}Repository
 
@@ -16,7 +17,8 @@ async def test_list_{{ cookiecutter.module_name }}_returns_page_from_repository(
 
 
 @pytest.mark.anyio
-async def test_get_{{ cookiecutter.entity_name }}_returns_none_when_missing() -> None:
+async def test_get_{{ cookiecutter.entity_name }}_raises_when_missing() -> None:
     service = {{ cookiecutter.__entity_class }}Service(repository=InMemory{{ cookiecutter.__entity_class }}Repository({{ cookiecutter.module_name }}={}))
 
-    assert await service.get_{{ cookiecutter.entity_name }}("missing") is None
+    with pytest.raises(exceptions.{{ cookiecutter.__entity_class }}NotFoundError):
+        await service.get_{{ cookiecutter.entity_name }}("missing")
