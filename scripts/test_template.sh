@@ -32,5 +32,7 @@ check my-service
 check feature-flags "project_name=Feature Flags" module_name=grades entity_name=grade
 # Multi-word names exercise the case conversions.
 check acme-order-hub "project_name=Acme Order Hub" module_name=order_items entity_name=order_item
+# A module name that sorts before `auth`/`features`/`shared` exercises import ordering.
+check books-api "project_name=Books API" module_name=books entity_name=book
 
 echo "==> Template OK"

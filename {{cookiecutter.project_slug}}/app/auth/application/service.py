@@ -1,9 +1,10 @@
+import collections.abc
 import dataclasses
 
 from app.auth.application.ports.google_oauth import GoogleOAuthClient
 from app.auth.application.ports.password_hasher import PasswordHasher
 from app.auth.application.ports.token_service import TokenService
-from app.auth.application.ports.user_repository import UserRepository
+from app.auth.application.ports.unit_of_work import UnitOfWork
 from app.auth.domain.exceptions import (
     EmailAlreadyRegisteredError,
     InvalidCredentialsError,
@@ -15,25 +16,32 @@ from app.auth.domain.user import User, normalize_email
 
 @dataclasses.dataclass(frozen=True, slots=True)
 class AuthService:
-    users: UserRepository
+    # Slow work (hashing, HTTP calls) runs outside `async with self.uow()` so it doesn't hold a
+    # database connection.
+    uow: collections.abc.Callable[[], UnitOfWork]
     password_hasher: PasswordHasher
     tokens: TokenService
     google: GoogleOAuthClient
 
     async def register(self, email: str, full_name: str, password: str) -> User:
         email = normalize_email(email)
-        if await self.users.get_by_email(email) is not None:
-            raise EmailAlreadyRegisteredError()
+        hashed_password = await self.password_hasher.hash(password)
 
-        user = User(
-            email=email,
-            full_name=full_name,
-            hashed_password=await self.password_hasher.hash(password),
-        )
-        return await self.users.add(user)
+        async with self.uow() as uow:
+            if await uow.users.get_by_email(email) is not None:
+                raise EmailAlreadyRegisteredError()
+
+            return await uow.users.add(
+                User(
+                    email=email,
+                    full_name=full_name,
+                    hashed_password=hashed_password,
+                )
+            )
 
     async def login(self, email: str, password: str) -> str:
-        user = await self.users.get_by_email(normalize_email(email))
+        async with self.uow() as uow:
+            user = await uow.users.get_by_email(normalize_email(email))
 
         if user is None or user.hashed_password is None:
             # Spend the same time as a real check so response timing doesn't reveal
@@ -47,7 +55,11 @@ class AuthService:
         return self._issue_token(user)
 
     async def authenticate(self, token: str) -> User:
-        user = await self.users.get_by_id(self.tokens.verify(token))
+        user_id = self.tokens.verify(token)
+
+        async with self.uow() as uow:
+            user = await uow.users.get_by_id(user_id)
+
         if user is None:
             raise InvalidTokenError()
 
@@ -62,23 +74,24 @@ class AuthService:
         if not identity.email_verified:
             raise UnverifiedEmailError()
 
-        user = await self.users.get_by_google_subject(identity.subject)
-
-        if user is None:
-            email = normalize_email(identity.email)
-            user = await self.users.get_by_email(email)
+        async with self.uow() as uow:
+            user = await uow.users.get_by_google_subject(identity.subject)
 
             if user is None:
-                user = await self.users.add(
-                    User(
-                        email=email,
-                        full_name=identity.full_name,
-                        google_subject=identity.subject,
+                email = normalize_email(identity.email)
+                user = await uow.users.get_by_email(email)
+
+                if user is None:
+                    user = await uow.users.add(
+                        User(
+                            email=email,
+                            full_name=identity.full_name,
+                            google_subject=identity.subject,
+                        )
                     )
-                )
-            else:
-                user.link_google_account(identity.subject)
-                user = await self.users.update(user)
+                else:
+                    user.link_google_account(identity.subject)
+                    user = await uow.users.update(user)
 
         return self._issue_token(user)
 

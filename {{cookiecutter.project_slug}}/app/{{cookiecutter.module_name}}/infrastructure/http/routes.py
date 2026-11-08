@@ -5,6 +5,9 @@ from fastapi import APIRouter, Depends
 
 from app.features.domain.constants import Features
 from app.features.infrastructure.http.dependencies import require_feature
+
+# Sorted separately so the import order doesn't depend on the module name.
+# isort: split
 from app.{{ cookiecutter.module_name }}.infrastructure.http.dependencies import {{ cookiecutter.__entity_class }}ServiceDep
 from app.{{ cookiecutter.module_name }}.infrastructure.http.schemas import {{ cookiecutter.__entity_class }}PageResponse, {{ cookiecutter.__entity_class }}Response
 

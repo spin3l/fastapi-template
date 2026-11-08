@@ -1,11 +1,13 @@
 import dataclasses
 import itertools
+import types
 import typing
 
 import pydantic
 
 from app.auth.application.ports.google_oauth import GoogleIdentity, GoogleOAuthClient
 from app.auth.application.ports.password_hasher import PasswordHasher
+from app.auth.application.ports.unit_of_work import UnitOfWork
 from app.auth.application.ports.user_repository import UserRepository
 from app.auth.domain.exceptions import IdentityProviderError
 from app.auth.domain.user import User
@@ -49,6 +51,29 @@ class InMemoryUserRepository(UserRepository):
         assert user.id is not None
         self.users[user.id] = user
         return user
+
+
+@dataclasses.dataclass
+class FakeUnitOfWork(UnitOfWork):
+    users: InMemoryUserRepository
+    commits: int = 0
+    rollbacks: int = 0
+
+    @typing.override
+    async def __aenter__(self) -> typing.Self:
+        return self
+
+    @typing.override
+    async def __aexit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc: BaseException | None,
+        traceback: types.TracebackType | None,
+    ) -> None:
+        if exc_type is None:
+            self.commits += 1
+        else:
+            self.rollbacks += 1
 
 
 class FakePasswordHasher(PasswordHasher):

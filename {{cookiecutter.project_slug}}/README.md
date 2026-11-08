@@ -29,6 +29,20 @@ Google Cloud Console → APIs & Services → Credentials. Add
 
 Protect any route with `CurrentUserDep` from `app/auth/infrastructure/http/dependencies.py`.
 
+## Configuration
+
+Settings come from the environment or `.env` (see `.env.example` and `app/shared/config.py`).
+
+| Variable        | Default   | What it does                                                    |
+| --------------- | --------- | --------------------------------------------------------------- |
+| `LOG_LEVEL`     | `INFO`    | Root log level                                                  |
+| `LOG_FORMAT`    | `console` | `console` for local dev, `json` for log collectors (Docker sets it) |
+| `CORS_ORIGINS`  | `[]`      | JSON list of allowed browser origins; empty disables CORS       |
+| `DOCS_ENABLED`  | `true`    | Serve `/docs`, `/redoc` and `/openapi.json`                     |
+
+`GET /health` (liveness, no dependencies) and `GET /ready` (checks the database, 503 when it's down)
+are meant for container and load-balancer probes.
+
 ## Commands
 
 | Command          | What it does                                  |

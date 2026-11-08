@@ -6,6 +6,7 @@ x-app: &app
   env_file: .env
   environment:
     DATABASE_URL: postgresql+asyncpg://postgres:postgres@db:5432/{{ cookiecutter.__project_snake }}
+    LOG_FORMAT: json
 
 services:
   db:
@@ -35,6 +36,13 @@ services:
     <<: *app
     ports:
       - "8000:8000"
+    healthcheck:
+      # The slim image has no curl.
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
     depends_on:
       db:
         condition: service_healthy

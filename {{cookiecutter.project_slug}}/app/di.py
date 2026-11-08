@@ -1,3 +1,6 @@
+import collections.abc
+import functools
+
 import httpx
 import structlog
 from configcatclient.configcatclient import ConfigCatClient
@@ -7,18 +10,21 @@ from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 from app.auth.application.ports.google_oauth import GoogleOAuthClient
 from app.auth.application.ports.password_hasher import PasswordHasher
 from app.auth.application.ports.token_service import TokenService
-from app.auth.application.ports.user_repository import UserRepository
+from app.auth.application.ports.unit_of_work import UnitOfWork
 from app.auth.application.service import AuthService
 from app.auth.infrastructure.google.oauth_client import GoogleOAuthHttpClient, create_http_client
-from app.auth.infrastructure.persistence.sqlalchemy_repository import SqlAlchemyUserRepository
+from app.auth.infrastructure.persistence.unit_of_work import SqlAlchemyUnitOfWork
 from app.auth.infrastructure.security.jwt_token_service import JwtTokenService
 from app.auth.infrastructure.security.password_hasher import PwdlibPasswordHasher
 from app.features.application.ports.feature_flags import FeatureFlagProvider
 from app.features.infrastructure.configcat import ConfigCatFeatureFlags, create_configcat_client
+from app.shared import config, db, logs
+
+# Sorted separately so the import order doesn't depend on the module name.
+# isort: split
 from app.{{ cookiecutter.module_name }}.application.ports.{{ cookiecutter.entity_name }}_repository import {{ cookiecutter.__entity_class }}Repository
 from app.{{ cookiecutter.module_name }}.application.service import {{ cookiecutter.__entity_class }}Service
 from app.{{ cookiecutter.module_name }}.infrastructure.persistence.in_memory import InMemory{{ cookiecutter.__entity_class }}Repository
-from app.shared import config, db, logs
 
 
 class Container(containers.DeclarativeContainer):
@@ -52,8 +58,11 @@ class Container(containers.DeclarativeContainer):
     )
 
     # Auth
-    users_repository: providers.Singleton[UserRepository] = providers.Singleton(
-        SqlAlchemyUserRepository,
+    # A zero-arg callable that opens a new unit of work per use case. Built as a `partial` so the
+    # (async) session factory is resolved here; a provider delegate would return a Future.
+    unit_of_work: providers.Factory[collections.abc.Callable[[], UnitOfWork]] = providers.Factory(
+        functools.partial,
+        SqlAlchemyUnitOfWork,
         session_factory=session_factory,
     )
 
@@ -78,7 +87,7 @@ class Container(containers.DeclarativeContainer):
 
     auth_service: providers.Factory[AuthService] = providers.Factory(
         AuthService,
-        users=users_repository,
+        uow=unit_of_work,
         password_hasher=password_hasher,
         tokens=token_service,
         google=google_oauth,

@@ -1,7 +1,10 @@
 import functools
+import typing
 
 import pydantic
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+LogFormat = typing.Literal["console", "json"]
 
 
 class Settings(BaseSettings):
@@ -9,6 +12,13 @@ class Settings(BaseSettings):
         extra="ignore",
         env_file=".env",
     )
+
+    log_level: str = "INFO"
+    log_format: LogFormat = "console"
+
+    # JSON list in the environment, e.g. CORS_ORIGINS='["https://app.example.com"]'.
+    cors_origins: list[str] = []
+    docs_enabled: bool = True
 
     configcat_sdk: pydantic.SecretStr
     configcat_poll_interval_seconds: int = 300

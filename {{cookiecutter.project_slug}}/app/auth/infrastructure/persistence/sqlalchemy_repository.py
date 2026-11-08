@@ -2,16 +2,20 @@ import dataclasses
 import typing
 
 from sqlalchemy import Select, select
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.application.ports.user_repository import UserRepository
+from app.auth.domain.exceptions import EmailAlreadyRegisteredError
 from app.auth.domain.user import User
 from app.auth.infrastructure.persistence.orm import UserModel
 
 
 @dataclasses.dataclass(frozen=True, slots=True)
 class SqlAlchemyUserRepository(UserRepository):
-    session_factory: async_sessionmaker[AsyncSession]
+    """Runs inside a `SqlAlchemyUnitOfWork` session; it flushes but never commits."""
+
+    session: AsyncSession
 
     @typing.override
     async def get_by_id(self, user_id: int) -> User | None:
@@ -27,20 +31,27 @@ class SqlAlchemyUserRepository(UserRepository):
 
     @typing.override
     async def add(self, user: User) -> User:
-        async with self.session_factory.begin() as session:
-            model = UserModel.from_domain(user)
-            session.add(model)
-            await session.flush()
-            return model.to_domain()
+        model = UserModel.from_domain(user)
+        self.session.add(model)
+        await self._flush()
+        return model.to_domain()
 
     @typing.override
     async def update(self, user: User) -> User:
-        async with self.session_factory.begin() as session:
-            model = await session.merge(UserModel.from_domain(user))
-            await session.flush()
-            return model.to_domain()
+        model = await self.session.merge(UserModel.from_domain(user))
+        await self._flush()
+        return model.to_domain()
 
     async def _get_one(self, statement: Select[tuple[UserModel]]) -> User | None:
-        async with self.session_factory() as session:
-            model = await session.scalar(statement)
-            return model.to_domain() if model else None
+        model = await self.session.scalar(statement)
+        return model.to_domain() if model else None
+
+    async def _flush(self) -> None:
+        # The service checks for duplicates first, but two concurrent requests can both pass that
+        # check; the unique constraints are the real guarantee. `email` is the only unique column a
+        # password signup sets; a `google_subject` clash means two concurrent first Google logins,
+        # for which a 409 is fine too.
+        try:
+            await self.session.flush()
+        except IntegrityError as exc:
+            raise EmailAlreadyRegisteredError() from exc

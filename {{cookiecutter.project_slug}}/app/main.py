@@ -3,14 +3,19 @@ import typing
 
 from asgi_correlation_id import CorrelationIdMiddleware
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
 
 import app.auth.infrastructure.http.dependencies as auth_dependencies
 import app.auth.infrastructure.http.routes as auth_routes
 import app.features.infrastructure.http.dependencies as features_dependencies
+
+# Sorted separately so the import order doesn't depend on the module name.
+# isort: split
 import app.{{ cookiecutter.module_name }}.infrastructure.http.routes as {{ cookiecutter.module_name }}_routes
 from app import di, handlers
 from app.shared import config, logs
+from app.shared.http import health
 
 
 def create_app(
@@ -23,10 +28,17 @@ def create_app(
     if settings is not None:
         container.settings.override(settings)
 
-    logs.setup_logging()
+    settings = container.settings()
+    logs.setup_logging(level=settings.log_level, log_format=settings.log_format)
 
     container.wire(
-        modules=[auth_routes, auth_dependencies, {{ cookiecutter.module_name }}_routes, features_dependencies],
+        modules=[
+            auth_routes,
+            auth_dependencies,
+            {{ cookiecutter.module_name }}_routes,
+            features_dependencies,
+            health,
+        ],
     )
 
     @contextlib.asynccontextmanager
@@ -42,13 +54,25 @@ def create_app(
     app = FastAPI(
         lifespan=lifespan,
         title="{{ cookiecutter.project_name }}",
-        docs_url="/docs",
+        docs_url="/docs" if settings.docs_enabled else None,
+        redoc_url="/redoc" if settings.docs_enabled else None,
+        openapi_url="/openapi.json" if settings.docs_enabled else None,
     )
     app.state.container = container
 
     app.add_middleware(BaseHTTPMiddleware, dispatch=logs.logging_middleware)
     app.add_middleware(CorrelationIdMiddleware)  # Must be after `logging_middleware`
+    if settings.cors_origins:
+        # Added last so it's the outermost middleware and answers preflights itself.
+        app.add_middleware(
+            CORSMiddleware,
+            allow_origins=settings.cors_origins,
+            allow_methods=["*"],
+            allow_headers=["*"],
+            expose_headers=["X-Request-ID"],
+        )
 
+    app.include_router(health.router)
     app.include_router(auth_routes.router)
     app.include_router({{ cookiecutter.module_name }}_routes.router)
 

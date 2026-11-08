@@ -10,7 +10,7 @@ from app.auth.domain.exceptions import (
     UnverifiedEmailError,
 )
 from app.auth.domain.user import User
-from tests.fakes import FakeGoogleOAuthClient, InMemoryUserRepository
+from tests.fakes import FakeGoogleOAuthClient, FakeUnitOfWork, InMemoryUserRepository
 
 pytestmark = pytest.mark.anyio
 
@@ -28,6 +28,43 @@ async def test_register_rejects_duplicate_email(auth_service: AuthService) -> No
 
     with pytest.raises(EmailAlreadyRegisteredError):
         await auth_service.register("ADA@example.com", "Ada", "other-pass")
+
+
+async def test_register_commits_its_unit_of_work(
+    auth_service: AuthService,
+    unit_of_work: FakeUnitOfWork,
+) -> None:
+    await auth_service.register("ada@example.com", "Ada", "s3cret-pass")
+
+    assert (unit_of_work.commits, unit_of_work.rollbacks) == (1, 0)
+
+
+async def test_register_rolls_back_when_email_is_taken(
+    auth_service: AuthService,
+    unit_of_work: FakeUnitOfWork,
+) -> None:
+    await auth_service.register("ada@example.com", "Ada", "s3cret-pass")
+
+    with pytest.raises(EmailAlreadyRegisteredError):
+        await auth_service.register("ada@example.com", "Ada", "other-pass")
+
+    assert unit_of_work.rollbacks == 1
+
+
+async def test_register_rejects_email_taken_by_concurrent_request(
+    auth_service: AuthService,
+    users: InMemoryUserRepository,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # Another request inserted the same email between our check and our insert; the repository
+    # turns the unique-constraint violation into the domain error.
+    async def add_hits_unique_constraint(user: User) -> User:
+        raise EmailAlreadyRegisteredError()
+
+    monkeypatch.setattr(users, "add", add_hits_unique_constraint)
+
+    with pytest.raises(EmailAlreadyRegisteredError):
+        await auth_service.register("ada@example.com", "Ada", "s3cret-pass")
 
 
 async def test_login_returns_token_for_valid_credentials(auth_service: AuthService) -> None:

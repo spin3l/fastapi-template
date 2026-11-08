@@ -12,7 +12,7 @@ app/
   main.py            # create_app() factory: middleware, routers, exception handlers, wiring
   handlers.py        # registers shared + every module's exception handlers
   di.py              # composition root: the ONLY place that picks an adapter for a port
-  shared/            # cross-cutting infra: config (Settings), logs, db (Base/engine), http/{schemas,errors}
+  shared/            # cross-cutting infra: config (Settings), logs, db (Base/engine), http/{schemas,errors,health}
   alembic/           # migrations (hand-written or `make migration m="..."`)
   <module>/          # auth, features, {{ cookiecutter.module_name }}, ...
     domain/          # entities (plain dataclasses), value objects, domain exceptions
@@ -41,6 +41,11 @@ tests/
 - **HTTP schemas live in `infrastructure/http/schemas.py`** and extend `shared.http.schemas.BaseSchema`
   (camelCase aliases). Exception: OAuth2 token responses stay snake_case.
 - **Routes never call driven ports directly**; they go through an application service.
+- **Transactions:** a service runs each use case inside `async with self.uow() as uow:` (a
+  `UnitOfWork` port, see `app/auth/application/ports/unit_of_work.py`), which commits on success and
+  rolls back on error. Repositories receive the session, `flush()` but never commit, and turn
+  unique-constraint `IntegrityError`s into domain exceptions. Keep slow work (hashing, HTTP calls)
+  outside the `async with`.
 - **Errors:** domain and application code raise domain exceptions (`domain/exceptions.py`); routes
   never raise `HTTPException`; each module's `http/errors.py` maps them to status
   codes in a `register_exception_handlers(app)` function, which is called from `app/handlers.py`.
@@ -52,6 +57,7 @@ tests/
 - **Feature flags:** gate routers with `dependencies=[Depends(require_feature(Features.X))]`.
 - **Auth:** protect routes with `CurrentUserDep` from `app/auth/infrastructure/http/dependencies.py`.
 - **Blocking work** (hashing, sync SDKs) runs via `anyio.to_thread.run_sync`.
+- **Probes:** `GET /health` is liveness (no dependencies); `GET /ready` checks the database.
 - **Config** goes in `shared/config.py` `Settings`, plus a line in `.env.example`. Never commit `.env`.
 
 ## Testing

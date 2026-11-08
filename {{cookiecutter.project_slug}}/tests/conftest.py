@@ -14,6 +14,7 @@ from tests.fakes import (
     FakeFeatureFlags,
     FakeGoogleOAuthClient,
     FakePasswordHasher,
+    FakeUnitOfWork,
     InMemoryUserRepository,
 )
 
@@ -44,6 +45,11 @@ def users() -> InMemoryUserRepository:
 
 
 @pytest.fixture
+def unit_of_work(users: InMemoryUserRepository) -> FakeUnitOfWork:
+    return FakeUnitOfWork(users=users)
+
+
+@pytest.fixture
 def google_oauth() -> FakeGoogleOAuthClient:
     return FakeGoogleOAuthClient()
 
@@ -59,12 +65,12 @@ def token_service(settings: Settings) -> JwtTokenService:
 
 @pytest.fixture
 def auth_service(
-    users: InMemoryUserRepository,
+    unit_of_work: FakeUnitOfWork,
     token_service: JwtTokenService,
     google_oauth: FakeGoogleOAuthClient,
 ) -> AuthService:
     return AuthService(
-        users=users,
+        uow=lambda: unit_of_work,
         password_hasher=FakePasswordHasher(),
         tokens=token_service,
         google=google_oauth,
@@ -75,14 +81,14 @@ def auth_service(
 def client(
     settings: Settings,
     feature_flags: FakeFeatureFlags,
-    users: InMemoryUserRepository,
+    unit_of_work: FakeUnitOfWork,
     google_oauth: FakeGoogleOAuthClient,
 ) -> typing.Iterator[TestClient]:
     container = di.Container()
     for resource in (container.configcat_client, container.db_engine, container.google_http_client):
         resource.override(providers.Object(None))
     container.feature_flags.override(providers.Object(feature_flags))
-    container.users_repository.override(providers.Object(users))
+    container.unit_of_work.override(providers.Object(lambda: unit_of_work))
     container.password_hasher.override(providers.Object(FakePasswordHasher()))
     container.google_oauth.override(providers.Object(google_oauth))
 

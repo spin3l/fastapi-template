@@ -16,6 +16,9 @@ to code there. Follow those rules when editing template code.
   must be listed in `_copy_without_render`.
 - Rendered Python must be **ruff-format stable for any name length**. Prefer explicit multi-line
   calls with a trailing comma over lines whose wrapping depends on how long a name is.
+- Rendered imports must be **sorted for any module/entity name**. Put imports whose path contains
+  `module_name` after the others, behind `# isort: split` (see `app/di.py`), or import from a
+  fixed prefix (`from app.<module>.domain import exceptions`) so name order can't matter.
 - `uv.lock` is templated (project name only). After changing dependencies, regenerate a project,
   run `uv lock` there, and copy the lockfile back with the `{{ cookiecutter.project_slug }}` name
   restored.
@@ -23,6 +26,6 @@ to code there. Follow those rules when editing template code.
 ## Verifying
 
 Always run `make test-template` after a change. It renders the template with several answer sets
-(defaults, `Feature Flags`/`grades`, multi-word names), checks that no Jinja is left unrendered, and
+(defaults, `Feature Flags`/`grades`, multi-word names, `books`), checks that no Jinja is left unrendered, and
 runs `uv lock --check`, `ruff format --check` and `make check` in each generated project. Output goes
 to `.generated/` (gitignored).
