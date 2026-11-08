@@ -18,3 +18,7 @@ class InMemory{{ cookiecutter.__entity_class }}Repository({{ cookiecutter.__enti
     @typing.override
     async def get(self, name: str) -> {{ cookiecutter.__entity_class }} | None:
         return self.{{ cookiecutter.module_name }}.get(name)
+
+    @typing.override
+    async def save(self, {{ cookiecutter.entity_name }}: {{ cookiecutter.__entity_class }}) -> None:
+        self.{{ cookiecutter.module_name }}[{{ cookiecutter.entity_name }}.name] = {{ cookiecutter.entity_name }}

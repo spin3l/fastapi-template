@@ -29,6 +29,28 @@ Google Cloud Console → APIs & Services → Credentials. Add
 
 Protect any route with `CurrentUserDep` from `app/auth/infrastructure/http/dependencies.py`.
 
+## Roles
+
+| Role         | Can do                                                                  |
+| ------------ | ----------------------------------------------------------------------- |
+| `user`       | Default for new sign-ups                                                |
+| `user_admin` | Manage only the resources an admin granted them                        |
+| `admin`      | Manage everything, including roles and grants                           |
+
+Bootstrap the first admin after signing up: `make admin email=you@example.com`
+(in Docker: `docker compose run --rm api python -m app.auth.infrastructure.cli make-admin you@example.com`).
+
+Admin-only endpoints:
+
+- `PATCH /users/{id}/role` with `{"role": "user_admin"}`. Admins can't change their own role, and
+  leaving `user_admin` drops the user's grants.
+- `GET /users/{id}/grants`, `POST /users/{id}/grants` with `{"resourceType": "...", "resourceId": "..."}`
+  (target must be a `user_admin`), `DELETE /users/{id}/grants/{resourceType}/{resourceId}`
+
+Protect a route that changes one resource with
+`dependencies=[Depends(require_resource_access(RESOURCE_TYPE, "<path param>"))]`
+(see `PUT /{{ cookiecutter.module_name }}/{name}`), or an admin-only route with `AdminUserDep`.
+
 ## Configuration
 
 Settings come from the environment or `.env` (see `.env.example` and `app/shared/config.py`).
@@ -56,6 +78,7 @@ are meant for container and load-balancer probes.
 | `make pre-commit`| Run every pre-commit hook on all files        |
 | `make migrate`   | Apply Alembic migrations                      |
 | `make migration m="message"` | Autogenerate a new migration      |
+| `make admin email=...` | Give an existing user the admin role     |
 | `make db`        | Start only Postgres (docker compose)          |
 | `make up` / `make down` | Start / stop the full Docker stack     |
 

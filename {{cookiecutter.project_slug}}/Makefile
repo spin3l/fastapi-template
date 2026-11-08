@@ -1,4 +1,4 @@
-.PHONY: dev test lint format typecheck check hooks pre-commit migrate migration db up down
+.PHONY: dev test lint format typecheck check hooks pre-commit migrate migration admin db up down
 
 dev:
 	uv run uvicorn app.main:create_app --factory --reload
@@ -30,6 +30,9 @@ migrate:
 
 migration:
 	uv run alembic revision --autogenerate -m "$(m)"
+
+admin:
+	uv run python -m app.auth.infrastructure.cli make-admin "$(email)"
 
 db:
 	docker compose up -d --wait db

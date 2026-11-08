@@ -6,6 +6,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
 
+import app.auth.infrastructure.http.admin_routes as auth_admin_routes
 import app.auth.infrastructure.http.dependencies as auth_dependencies
 import app.auth.infrastructure.http.routes as auth_routes
 import app.features.infrastructure.http.dependencies as features_dependencies
@@ -34,6 +35,7 @@ def create_app(
     container.wire(
         modules=[
             auth_routes,
+            auth_admin_routes,
             auth_dependencies,
             {{ cookiecutter.module_name }}_routes,
             features_dependencies,
@@ -74,6 +76,7 @@ def create_app(
 
     app.include_router(health.router)
     app.include_router(auth_routes.router)
+    app.include_router(auth_admin_routes.router)
     app.include_router({{ cookiecutter.module_name }}_routes.router)
 
     handlers.register_exception_handlers(app)

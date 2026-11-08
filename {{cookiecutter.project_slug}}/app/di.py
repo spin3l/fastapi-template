@@ -7,6 +7,7 @@ from configcatclient.configcatclient import ConfigCatClient
 from dependency_injector import containers, providers
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 
+from app.auth.application.authorization_service import AuthorizationService
 from app.auth.application.ports.google_oauth import GoogleOAuthClient
 from app.auth.application.ports.password_hasher import PasswordHasher
 from app.auth.application.ports.token_service import TokenService
@@ -91,6 +92,11 @@ class Container(containers.DeclarativeContainer):
         password_hasher=password_hasher,
         tokens=token_service,
         google=google_oauth,
+    )
+
+    authorization_service: providers.Factory[AuthorizationService] = providers.Factory(
+        AuthorizationService,
+        uow=unit_of_work,
     )
 
     # Features

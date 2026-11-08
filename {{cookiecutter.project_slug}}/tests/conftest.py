@@ -6,6 +6,7 @@ from dependency_injector import providers
 from fastapi.testclient import TestClient
 
 from app import di
+from app.auth.application.authorization_service import AuthorizationService
 from app.auth.application.service import AuthService
 from app.auth.infrastructure.security.jwt_token_service import JwtTokenService
 from app.main import create_app
@@ -15,6 +16,7 @@ from tests.fakes import (
     FakeGoogleOAuthClient,
     FakePasswordHasher,
     FakeUnitOfWork,
+    InMemoryResourceGrantRepository,
     InMemoryUserRepository,
 )
 
@@ -45,8 +47,21 @@ def users() -> InMemoryUserRepository:
 
 
 @pytest.fixture
-def unit_of_work(users: InMemoryUserRepository) -> FakeUnitOfWork:
-    return FakeUnitOfWork(users=users)
+def grants() -> InMemoryResourceGrantRepository:
+    return InMemoryResourceGrantRepository()
+
+
+@pytest.fixture
+def unit_of_work(
+    users: InMemoryUserRepository,
+    grants: InMemoryResourceGrantRepository,
+) -> FakeUnitOfWork:
+    return FakeUnitOfWork(users=users, grants=grants)
+
+
+@pytest.fixture
+def authorization_service(unit_of_work: FakeUnitOfWork) -> AuthorizationService:
+    return AuthorizationService(uow=lambda: unit_of_work)
 
 
 @pytest.fixture

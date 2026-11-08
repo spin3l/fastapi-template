@@ -33,6 +33,7 @@ def test_register_login_and_me(client: TestClient) -> None:
         "email": "ada@example.com",
         "fullName": "Ada",
         "isActive": True,
+        "role": "user",
     }
 
 

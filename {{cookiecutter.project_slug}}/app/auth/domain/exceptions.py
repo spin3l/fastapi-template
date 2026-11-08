@@ -29,5 +29,21 @@ class InvalidOAuthStateError(AuthError):
     message = "Invalid OAuth state"
 
 
+class ForbiddenError(AuthError):
+    message = "Not enough permissions"
+
+
+class UserNotFoundError(AuthError):
+    message = "User not found"
+
+
+class CannotChangeOwnRoleError(AuthError):
+    message = "You can't change your own role"
+
+
+class InvalidGrantError(AuthError):
+    message = "Only user admins can be granted resources"
+
+
 class IdentityProviderError(AuthError):
     message = "Could not authenticate with the identity provider"

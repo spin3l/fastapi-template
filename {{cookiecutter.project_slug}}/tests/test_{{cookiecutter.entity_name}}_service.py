@@ -22,3 +22,14 @@ async def test_get_{{ cookiecutter.entity_name }}_raises_when_missing() -> None:
 
     with pytest.raises(exceptions.{{ cookiecutter.__entity_class }}NotFoundError):
         await service.get_{{ cookiecutter.entity_name }}("missing")
+
+
+@pytest.mark.anyio
+async def test_update_{{ cookiecutter.entity_name }}_saves_new_value() -> None:
+    repository = InMemory{{ cookiecutter.__entity_class }}Repository({{ cookiecutter.module_name }}={"a": {{ cookiecutter.__entity_class }}(name="a", value=1)})
+    service = {{ cookiecutter.__entity_class }}Service(repository=repository)
+
+    updated = await service.update_{{ cookiecutter.entity_name }}("a", 5)
+
+    assert updated == {{ cookiecutter.__entity_class }}(name="a", value=5)
+    assert await repository.get("a") == updated

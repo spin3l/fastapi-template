@@ -2,10 +2,14 @@ from fastapi import FastAPI, requests, responses, status
 
 from app.auth.domain.exceptions import (
     AuthError,
+    CannotChangeOwnRoleError,
     EmailAlreadyRegisteredError,
+    ForbiddenError,
     InactiveUserError,
+    InvalidGrantError,
     InvalidOAuthStateError,
     UnverifiedEmailError,
+    UserNotFoundError,
 )
 from app.shared.http.errors import error_response
 
@@ -14,6 +18,10 @@ _STATUS_CODES: dict[type[Exception], int] = {
     InactiveUserError: status.HTTP_403_FORBIDDEN,
     InvalidOAuthStateError: status.HTTP_400_BAD_REQUEST,
     UnverifiedEmailError: status.HTTP_403_FORBIDDEN,
+    ForbiddenError: status.HTTP_403_FORBIDDEN,
+    UserNotFoundError: status.HTTP_404_NOT_FOUND,
+    CannotChangeOwnRoleError: status.HTTP_400_BAD_REQUEST,
+    InvalidGrantError: status.HTTP_400_BAD_REQUEST,
 }
 
 

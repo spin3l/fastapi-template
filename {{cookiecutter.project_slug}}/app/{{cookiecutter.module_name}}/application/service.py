@@ -18,3 +18,8 @@ class {{ cookiecutter.__entity_class }}Service:
             raise exceptions.{{ cookiecutter.__entity_class }}NotFoundError(name)
 
         return {{ cookiecutter.entity_name }}
+
+    async def update_{{ cookiecutter.entity_name }}(self, name: str, value: int) -> {{ cookiecutter.__entity_class }}:
+        {{ cookiecutter.entity_name }} = dataclasses.replace(await self.get_{{ cookiecutter.entity_name }}(name), value=value)
+        await self.repository.save({{ cookiecutter.entity_name }})
+        return {{ cookiecutter.entity_name }}

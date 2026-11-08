@@ -7,9 +7,11 @@ import pydantic
 
 from app.auth.application.ports.google_oauth import GoogleIdentity, GoogleOAuthClient
 from app.auth.application.ports.password_hasher import PasswordHasher
+from app.auth.application.ports.resource_grant_repository import ResourceGrantRepository
 from app.auth.application.ports.unit_of_work import UnitOfWork
 from app.auth.application.ports.user_repository import UserRepository
 from app.auth.domain.exceptions import IdentityProviderError
+from app.auth.domain.roles import ResourceGrant
 from app.auth.domain.user import User
 from app.features.application.ports.feature_flags import FeatureFlagProvider
 
@@ -54,8 +56,39 @@ class InMemoryUserRepository(UserRepository):
 
 
 @dataclasses.dataclass
+class InMemoryResourceGrantRepository(ResourceGrantRepository):
+    grants: set[ResourceGrant] = dataclasses.field(default_factory=set)
+
+    @typing.override
+    async def exists(self, grant: ResourceGrant) -> bool:
+        return grant in self.grants
+
+    @typing.override
+    async def list_for_user(self, user_id: int) -> list[ResourceGrant]:
+        return sorted(
+            (g for g in self.grants if g.user_id == user_id),
+            key=lambda g: (g.resource_type, g.resource_id),
+        )
+
+    @typing.override
+    async def add(self, grant: ResourceGrant) -> None:
+        self.grants.add(grant)
+
+    @typing.override
+    async def delete(self, grant: ResourceGrant) -> None:
+        self.grants.discard(grant)
+
+    @typing.override
+    async def delete_for_user(self, user_id: int) -> None:
+        self.grants = {g for g in self.grants if g.user_id != user_id}
+
+
+@dataclasses.dataclass
 class FakeUnitOfWork(UnitOfWork):
     users: InMemoryUserRepository
+    grants: InMemoryResourceGrantRepository = dataclasses.field(
+        default_factory=InMemoryResourceGrantRepository,
+    )
     commits: int = 0
     rollbacks: int = 0
 

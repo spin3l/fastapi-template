@@ -6,5 +6,9 @@ class {{ cookiecutter.__entity_class }}Response(BaseSchema):
     value: int
 
 
+class {{ cookiecutter.__entity_class }}UpdateRequest(BaseSchema):
+    value: int
+
+
 class {{ cookiecutter.__entity_class }}PageResponse(BaseSchema):
     results: list[{{ cookiecutter.__entity_class }}Response]

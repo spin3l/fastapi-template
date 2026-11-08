@@ -56,6 +56,11 @@ tests/
   shutdown (clients, engines). Add any module using `Provide[...]` to `container.wire(...)` in `main.py`.
 - **Feature flags:** gate routers with `dependencies=[Depends(require_feature(Features.X))]`.
 - **Auth:** protect routes with `CurrentUserDep` from `app/auth/infrastructure/http/dependencies.py`.
+- **Roles:** `user` < `user_admin` (only resources granted via `resource_grants`) < `admin` (everything).
+  Gate a route that changes one resource with
+  `Depends(require_resource_access(RESOURCE_TYPE, "<path param>"))`, where `RESOURCE_TYPE` is a
+  constant in the module's domain; gate admin-only routes with `AdminUserDep`. Role and grant
+  rules live in `AuthorizationService`; services that take an `actor` check permissions themselves.
 - **Blocking work** (hashing, sync SDKs) runs via `anyio.to_thread.run_sync`.
 - **Probes:** `GET /health` is liveness (no dependencies); `GET /ready` checks the database.
 - **Config** goes in `shared/config.py` `Settings`, plus a line in `.env.example`. Never commit `.env`.

@@ -1,6 +1,7 @@
-from sqlalchemy import String
+from sqlalchemy import ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column
 
+from app.auth.domain.roles import ResourceGrant, Role
 from app.auth.domain.user import User
 from app.shared.db import Base
 
@@ -35,8 +36,11 @@ class UserModel(Base):
         default=True,
     )
 
-    is_superuser: Mapped[bool] = mapped_column(
-        default=False,
+    # Plain string (not a native enum) so adding a role doesn't need an ALTER TYPE migration.
+    role: Mapped[str] = mapped_column(
+        String(20),
+        default=Role.USER,
+        server_default=Role.USER,
     )
 
     def to_domain(self) -> User:
@@ -47,7 +51,7 @@ class UserModel(Base):
             hashed_password=self.hashed_password,
             google_subject=self.google_subject,
             is_active=self.is_active,
-            is_superuser=self.is_superuser,
+            role=Role(self.role),
         )
 
     @classmethod
@@ -59,5 +63,39 @@ class UserModel(Base):
             hashed_password=user.hashed_password,
             google_subject=user.google_subject,
             is_active=user.is_active,
-            is_superuser=user.is_superuser,
+            role=user.role,
+        )
+
+
+class ResourceGrantModel(Base):
+    __tablename__ = "resource_grants"
+
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"),
+        primary_key=True,
+    )
+
+    resource_type: Mapped[str] = mapped_column(
+        String(64),
+        primary_key=True,
+    )
+
+    resource_id: Mapped[str] = mapped_column(
+        String(255),
+        primary_key=True,
+    )
+
+    def to_domain(self) -> ResourceGrant:
+        return ResourceGrant(
+            user_id=self.user_id,
+            resource_type=self.resource_type,
+            resource_id=self.resource_id,
+        )
+
+    @classmethod
+    def from_domain(cls, grant: ResourceGrant) -> "ResourceGrantModel":
+        return cls(
+            user_id=grant.user_id,
+            resource_type=grant.resource_type,
+            resource_id=grant.resource_id,
         )

@@ -3,13 +3,18 @@ import typing
 
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from app.auth.application.ports.resource_grant_repository import ResourceGrantRepository
 from app.auth.application.ports.unit_of_work import UnitOfWork
 from app.auth.application.ports.user_repository import UserRepository
+from app.auth.infrastructure.persistence.sqlalchemy_grant_repository import (
+    SqlAlchemyResourceGrantRepository,
+)
 from app.auth.infrastructure.persistence.sqlalchemy_repository import SqlAlchemyUserRepository
 
 
 class SqlAlchemyUnitOfWork(UnitOfWork):
     users: UserRepository
+    grants: ResourceGrantRepository
 
     def __init__(self, session_factory: async_sessionmaker[AsyncSession]) -> None:
         self._session_factory = session_factory
@@ -19,6 +24,7 @@ class SqlAlchemyUnitOfWork(UnitOfWork):
     async def __aenter__(self) -> typing.Self:
         self._session = self._session_factory()
         self.users = SqlAlchemyUserRepository(session=self._session)
+        self.grants = SqlAlchemyResourceGrantRepository(session=self._session)
         return self
 
     @typing.override
